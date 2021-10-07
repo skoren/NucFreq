@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import argparse
+import math
 import sys
 
 parser = argparse.ArgumentParser(description="", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -24,10 +25,11 @@ parser.add_argument('--header', action="store_true", default=False)
 parser.add_argument("--psvsites", help="CC/mi.gml.sites", default=None)
 parser.add_argument('-s', '--soft', action="store_true", default=False)
 parser.add_argument('-c', '--minclip', help="min number of clippsed bases in order to be displayed", type=float , default=1000)
+parser.add_argument('-n', '--name', help="name of tech to put in y axis")
 args = parser.parse_args()
 
 
-
+print("Beginning load", file=sys.stderr, flush=True)
 import os 
 import numpy as np
 import pysam
@@ -56,7 +58,7 @@ conQuery=       [M, I, S, E, X] # these ones "consume" the query
 conAln  =       [M, I, D, N, S, E, X] # these ones "consume" the alignments
 
 
-sys.stderr.write("Packages loaded\n")
+print("Packages loaded", file=sys.stderr, flush=True)
 
 
 def getSoft(read, group=0):
@@ -76,7 +78,7 @@ bam = pysam.AlignmentFile(args.infile)
 refs = {}
 regions = []
 if(args.regions is not None or args.bed is not None):
-    sys.stderr.write("Reading in the region or bed argument(s).\n")
+    print("Reading in the region or bed argument(s).", file=sys.stderr, flush=True)
     if(args.regions is not None):
         for region in args.regions:
             match = re.match("(.+):(\d+)-(\d+)", region)
@@ -93,7 +95,7 @@ if(args.regions is not None or args.bed is not None):
             regions.append( (chrm, int(start), int(end)) ) 
 
 else:
-  sys.stderr.write("Reading the whole bam becuase no region or bed argument was made.\n")
+  print("Reading the whole bam becuase no region or bed argument was made.", file=sys.stderr, flush=True)
   for read in bam.fetch(until_eof=True):
     ref = read.reference_name
     #read.query_qualities = [60] * len(read.query_sequence) 
@@ -135,7 +137,7 @@ nf = {"contig":[], "position":[], "A":[], "C":[], "G":[], "T":[], "group":[]}
 GROUPS = 0
 for contig, start, end  in regions:
     #start, end = refs[contig]
-    sys.stderr.write("Reading in NucFreq from region: {}:{}-{}\n".format(contig,start,end))
+    print("Reading in NucFreq from region: {}:{}-{}".format(contig,start,end), file=sys.stderr, flush=True)
     cov = getCovByBase(contig, start, end)
     contiglen = len(cov["A"])
     if(contiglen > 0):
@@ -174,25 +176,30 @@ colors = sns.color_palette()
 cmap = {}
 counter = 0
 if(args.repeatmasker is not None):
-  names = ["score", "perdiv", "perdel", "perins", "qname", "start", "end", "left", "strand", "repeat", "family", "rstart", "rend", "rleft", "ID"]
+  print("Reading repeat masker input", file=sys.stderr, flush=True)
+
+  names = ["qname", "start", "end", "family", "score", "strand", "other1", "other2", "color"]
   lines = []
   for idx, line in enumerate(args.repeatmasker):
     if(idx > 2):
-      lines.append(line.strip().split()[0:15])
+      l = line.strip().split()
+      l[8] = '#' + ''.join('{:02x}'.format(int(i)) for i in l[8].split(","))
+      lines.append(l)
   
   RM = pd.DataFrame(lines, columns=names)
   RM.start = RM.start.astype(int)
   RM.end = RM.end.astype(int)
-  RM["label"] =RM.family.str.replace("/.*", "")
-  for idx, lab in enumerate(sorted(RM.label.unique())):
-    cmap[lab] = colors[ counter%len(colors) ]
-    counter += 1
-  RM["color"] = RM.label.map(cmap)
+  #RM["label"] =RM.family.str.replace("/.*", "")
+  #for idx, lab in enumerate(sorted(RM.label.unique())):
+  #  cmap[lab] = colors[ counter%len(colors) ]
+  #  counter += 1
+  #  print("Set label %s to color %s"%(lab, cmap[lab]), file=sys.stderr, flush=True)
+  #RM["color"] = RM.label.map(cmap)
   
   args.repeatmasker.close()
+  print("Done reading RM", file=sys.stderr, flush=True)
 
-
-sys.stderr.write("Plotting {} regions in {}\n".format(GROUPS, args.outfile))
+print("Plotting {} regions in {}".format(GROUPS, args.outfile), file=sys.stderr, flush=True)
 # SET up the plot based on the number of regions 
 HEIGHT=GROUPS*args.height
 # set text size
@@ -216,6 +223,10 @@ for group_id, group in df.groupby(by="group"):
     truepos = group.position.values
     first = group["first"].values
     second = group["second"].values
+    print("Plotting truepos:", file=sys.stderr, flush=True)
+    print(truepos, file=sys.stderr, flush=True)
+    print(first, file=sys.stderr, flush=True)
+    print(second, file=sys.stderr, flush=True)
     
     #df = pd.DataFrame(nf, columns=["contig", "position", "A", "C", "G", "T"])
     if args.obed:
@@ -237,14 +248,20 @@ for group_id, group in df.groupby(by="group"):
 
     if(RM is not None):
         rmax = ax
+        print("Trying to get RM for contig %s with psitions %d-%d"%(contig, min(truepos), max(truepos)), file=sys.stderr, flush=True)
         rm = RM[ (RM.qname == contig) & (RM.start >= min(truepos)) & (RM.end <= max(truepos)) ]
+        print("Done searching for RM found %d entries"%(len(rm.index)), file=sys.stderr, flush=True)
         assert len(rm.index) != 0, "No matching RM contig"
         #rmax.set_xlim(rm.start.min(), rm.end.max())
         #rmax.set_ylim(-1, 9)
 
+        counter = 0
         for idx, row in rm.iterrows():  
+            if (counter % 100 == 0):
+               print("Loaded %d RM entries for region %d-%d color %s"%(idx, row.start, row.end, row.color), file=sys.stderr, flush=True)
+            counter = counter + 1
             width = row.end - row.start
-            rect = patches.Rectangle((row.start,0), width, -max(first)/20, linewidth=1, edgecolor='none',facecolor=row.color, alpha = .75) 
+            rect = patches.Rectangle((row.start,min(YLIM, args.ylim)-5), width, 5, linewidth=1, edgecolor='none',facecolor=row.color, alpha = .75) 
             rmax.add_patch(rect)
         plt.show()
 
@@ -263,25 +280,31 @@ for group_id, group in df.groupby(by="group"):
     title = "{}:{}-{}\n".format(contig, minval, maxval)
     if(GROUPS > 1):
         ax.set_title(title, fontweight='bold')
-    sys.stderr.write(title)
+    print(title, file=sys.stderr, flush=True)
 
     if(args.zerostart):
+        print(ax.get_xticks(), file=sys.stderr, flush=True)
+        #subval = ax.get_xticks()[0]
+        #if ax.get_xticks()[0] < 0:
+        #   subval=ax.get_xticks()[1]
+
+        # original code 
         subval = minval - 1 
         ax.set_xticks(  [ x for x in ax.get_xticks() if (x - subval > 0) and (x < maxval)  ] )
         maxval = maxval - minval 
-
-
+        print(ax.get_xticks(), file=sys.stderr, flush=True)
     if( maxval < 1000000 ):
         xlabels = [format( (label-subval), ',.0f') for label in ax.get_xticks()]
         lab = "bp"
-    elif( maxval < 10000000):
-        xlabels = [format( (label-subval)/1000, ',.1f') for label in ax.get_xticks()]
-        lab = "kbp"
+    #elif( maxval < 10000000):
+    #    xlabels = [format( (label-subval)/1000, ',.1f') for label in ax.get_xticks()]
+    #    lab = "kbp"
     else:
-        xlabels = [format( (label-subval)/1000, ',.1f') for label in ax.get_xticks()]
-        lab = "kbp"
+        #xlabels = [format( (label-subval)/1000, ',.1f') for label in ax.get_xticks()]
+        #lab = "kbp"
+        xlabels = [ format(int((label-subval)/1000000), ',.2f') for label in ax.get_xticks()]
         #xlabels = [format( (label-subval)/1000000, ',.2f') for label in ax.get_xticks()]
-        #lab = "Mbp"
+        lab = "Mbp"
 
 
     if(args.ylim is not None):
@@ -290,7 +313,7 @@ for group_id, group in df.groupby(by="group"):
         ax.set_ylim(0, YLIM)
 
     ax.set_xlabel('Assembly position ({})'.format(lab), fontweight='bold')
-    ax.set_ylabel('Sequence read depth', fontweight='bold')
+    ax.set_ylabel('{} depth'.format(args.name), fontweight='bold')
 
     ylabels = [format(label, ',.0f') for label in ax.get_yticks()]
     ax.set_yticklabels(ylabels)
@@ -340,7 +363,7 @@ for group_id, group in df.groupby(by="group"):
                 y = second[ idxs ]
                 ax.plot(x,y, alpha=0.5) #, label="group:{}".format(idx) )
             except Exception as e:
-                print("Skipping because error: {}".format(e), file=sys.stderr)
+                print("Skipping because error: {}".format(e), file=sys.stderr, flush=True)
                 continue
 
     #outpath = os.path.abspath(args.outfile)
@@ -353,6 +376,6 @@ for group_id, group in df.groupby(by="group"):
     counter += 1
 
 plt.tight_layout()
-plt.savefig(args.outfile, dpi=args.dpi)
+plt.savefig(args.outfile, dpi=args.dpi, format="png")
 
 
