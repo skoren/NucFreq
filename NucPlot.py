@@ -245,6 +245,11 @@ for group_id, group in df.groupby(by="group"):
     # get the correct axis 
     ax = axs[group_id]
 
+    if(args.ylim is not None):
+        ax.set_ylim(0, args.ylim)
+        YLIM = args.ylim
+    else:
+        ax.set_ylim(0, YLIM)
 
     if(RM is not None):
         rmax = ax
@@ -277,9 +282,10 @@ for group_id, group in df.groupby(by="group"):
     minval = min(truepos)
     subval = 0
 
+    title_size=22
     title = "{}:{}-{}\n".format(contig, minval, maxval)
-    if(GROUPS > 1):
-        ax.set_title(title, fontweight='bold')
+    #if(GROUPS > 1):
+    ax.set_title(title, fontweight='bold', fontsize=title_size)
     print(title, file=sys.stderr, flush=True)
 
     if(args.zerostart):
@@ -302,22 +308,19 @@ for group_id, group in df.groupby(by="group"):
     else:
         #xlabels = [format( (label-subval)/1000, ',.1f') for label in ax.get_xticks()]
         #lab = "kbp"
-        xlabels = [ format(int((label-subval)/1000000), ',.2f') for label in ax.get_xticks()]
-        #xlabels = [format( (label-subval)/1000000, ',.2f') for label in ax.get_xticks()]
+        xlabels = [ format((label-subval)/1000000, ',.1f') for label in ax.get_xticks()]
+        #xlabels = [format( (label-subval)/1000000, ',.1f') for label in ax.get_xticks()]
         lab = "Mbp"
 
 
-    if(args.ylim is not None):
-        ax.set_ylim(0, args.ylim)
-    else:
-        ax.set_ylim(0, YLIM)
-
-    ax.set_xlabel('Assembly position ({})'.format(lab), fontweight='bold')
-    ax.set_ylabel('{} depth'.format(args.name), fontweight='bold')
+    label_size=20
+    ax.set_xlabel('Assembly position ({})'.format(lab), fontweight='bold', fontsize=label_size)
+    ax.set_ylabel('{} depth'.format(args.name), fontweight='bold', fontsize=label_size)
 
     ylabels = [format(label, ',.0f') for label in ax.get_yticks()]
-    ax.set_yticklabels(ylabels)
-    ax.set_xticklabels(xlabels)
+    tick_size=label_size
+    ax.set_yticklabels(ylabels, fontsize=tick_size)
+    ax.set_xticklabels(xlabels, fontsize=tick_size)
 
     # Hide the right and top spines
     ax.spines["right"].set_visible(False)
