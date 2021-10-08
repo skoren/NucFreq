@@ -16,6 +16,7 @@ parser.add_argument('--bed', default=None, help="bed file with regions to plot")
 parser.add_argument('--obed', default=None, help="output a bed with the data points")
 parser.add_argument('--minobed', help="min number of discordant bases to report in obed", type=int , default=2)
 parser.add_argument('-y', '--ylim', help="max y axis limit", type=float , default=None)
+parser.add_argument('-f', '--font-size', help="plot font-size", type=int , default=16)
 parser.add_argument('--freey', action="store_true", default=False)
 parser.add_argument('--height', help="figure height", type=float , default=9)
 parser.add_argument('-w', '--width', help="figure width", type=float , default=16)
@@ -28,6 +29,7 @@ parser.add_argument('-c', '--minclip', help="min number of clippsed bases in ord
 parser.add_argument('-n', '--name', help="name of tech to put in y axis")
 args = parser.parse_args()
 
+sys.stderr.write(f"Using a font-size of {args.font_size}\n")
 
 print("Beginning load", file=sys.stderr, flush=True)
 import os 
@@ -203,7 +205,7 @@ print("Plotting {} regions in {}".format(GROUPS, args.outfile), file=sys.stderr,
 # SET up the plot based on the number of regions 
 HEIGHT=GROUPS*args.height
 # set text size
-matplotlib.rcParams.update({'font.size': 16})
+matplotlib.rcParams.update({'font.size': args.font_size})
 # make axes 
 fig, axs = plt.subplots(nrows=GROUPS, ncols=1, figsize=(args.width, HEIGHT) )
 if(GROUPS==1): axs = [axs]
@@ -282,10 +284,9 @@ for group_id, group in df.groupby(by="group"):
     minval = min(truepos)
     subval = 0
 
-    title_size=22
     title = "{}:{}-{}\n".format(contig, minval, maxval)
     #if(GROUPS > 1):
-    ax.set_title(title, fontweight='bold', fontsize=title_size)
+    ax.set_title(title, fontweight='bold', fontsize=args.font_size + 2)
     print(title, file=sys.stderr, flush=True)
 
     if(args.zerostart):
@@ -309,18 +310,12 @@ for group_id, group in df.groupby(by="group"):
         #xlabels = [format( (label-subval)/1000, ',.1f') for label in ax.get_xticks()]
         #lab = "kbp"
         xlabels = [ format((label-subval)/1000000, ',.1f') for label in ax.get_xticks()]
-        #xlabels = [format( (label-subval)/1000000, ',.1f') for label in ax.get_xticks()]
         lab = "Mbp"
 
 
-    label_size=20
-    ax.set_xlabel('Assembly position ({})'.format(lab), fontweight='bold', fontsize=label_size)
-    ax.set_ylabel('{} depth'.format(args.name), fontweight='bold', fontsize=label_size)
-
-    ylabels = [format(label, ',.0f') for label in ax.get_yticks()]
-    tick_size=label_size
-    ax.set_yticklabels(ylabels, fontsize=tick_size)
-    ax.set_xticklabels(xlabels, fontsize=tick_size)
+    ax.set_xlabel('Assembly position ({})'.format(lab), fontweight='bold')
+    ax.set_ylabel('{} depth'.format(args.name), fontweight='bold')
+    ax.set_xticklabels(xlabels)
 
     # Hide the right and top spines
     ax.spines["right"].set_visible(False)
