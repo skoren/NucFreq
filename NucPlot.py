@@ -23,10 +23,12 @@ parser.add_argument('-w', '--width', help="figure width", type=float , default=1
 parser.add_argument('--dpi', help="dpi for png", type=float , default=600)
 parser.add_argument('-t', '--threads', help="[8]", type=int , default=8)
 parser.add_argument('--header', action="store_true", default=False)
+parser.add_argument('--no-title', action="store_true", default=False)
+parser.add_argument('--no-xlabel', action="store_true", default=False)
 parser.add_argument("--psvsites", help="CC/mi.gml.sites", default=None)
 parser.add_argument('-s', '--soft', action="store_true", default=False)
 parser.add_argument('-c', '--minclip', help="min number of clippsed bases in order to be displayed", type=float , default=1000)
-parser.add_argument('-n', '--name', help="name of tech to put in y axis")
+parser.add_argument('-n', '--name', help="name of tech to put in y axis", default=None)
 args = parser.parse_args()
 
 sys.stderr.write(f"Using a font-size of {args.font_size}\n")
@@ -284,10 +286,13 @@ for group_id, group in df.groupby(by="group"):
     minval = min(truepos)
     subval = 0
 
-    title = "{}:{}-{}\n".format(contig, minval, maxval)
-    #if(GROUPS > 1):
-    ax.set_title(title, fontweight='bold', fontsize=args.font_size + 2)
-    print(title, file=sys.stderr, flush=True)
+    if args.no_title:
+        print("Not setting a title", file=sys.stderr, flush=True)
+    else:
+        title = "{}:{}-{}\n".format(contig, minval, maxval)
+        #if(GROUPS > 1):
+        ax.set_title(title, fontweight='bold', fontsize=args.font_size + 2)
+        print(title, file=sys.stderr, flush=True)
 
     if(args.zerostart):
         print(ax.get_xticks(), file=sys.stderr, flush=True)
@@ -313,8 +318,12 @@ for group_id, group in df.groupby(by="group"):
         lab = "Mbp"
 
 
-    ax.set_xlabel('Assembly position ({})'.format(lab), fontweight='bold')
-    ax.set_ylabel('{} depth'.format(args.name), fontweight='bold')
+    if not args.no_xlabel:
+        ax.set_xlabel('Assembly position ({})'.format(lab), fontweight='bold')
+
+    if args.name is not None:
+        ax.set_ylabel('{} depth'.format(args.name), fontweight='bold')
+
     ax.set_xticklabels(xlabels)
 
     # Hide the right and top spines
