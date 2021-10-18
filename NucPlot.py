@@ -275,7 +275,7 @@ for group_id, group in df.groupby(by="group"):
         plt.show()
 
     prime, = ax.plot(truepos, first, 'o', color="black", markeredgewidth=0.0, markersize=2, label = "most frequent base pair")
-    sec, = ax.plot(truepos, second,'o', color="red",   markeredgewidth=0.0, markersize=4, label = "second most frequent base pair")
+    sec, = ax.plot(truepos, second,'o', color="red",   markeredgewidth=0.0, markersize=2, label = "second most frequent base pair")
 
 
     #inter = int( (max(truepos)-min(truepos))/50)
@@ -325,9 +325,7 @@ for group_id, group in df.groupby(by="group"):
     if args.name is not None:
         ax.set_ylabel('{} depth'.format(args.name), fontweight='bold')
 
-    #ax.set_xticklabels(xlabels)
-    ax.set_xticklabels([])
-    ax.set_yticklabels([])
+    ax.set_xticklabels(xlabels)
 
     # Hide the right and top spines
     ax.spines["right"].set_visible(False)
@@ -386,4 +384,6 @@ for group_id, group in df.groupby(by="group"):
     counter += 1
 
 plt.tight_layout()
-plt.savefig(args.outfile, transparent=True, dpi=args.dpi, format="png")
+plt.savefig(args.outfile, dpi=args.dpi, format="png")
+
+
