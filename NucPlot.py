@@ -319,7 +319,8 @@ for group_id, group in df.groupby(by="group"):
 
 
     if not args.no_xlabel:
-        ax.set_xlabel('Assembly position ({})'.format(lab), fontweight='bold')
+        #ax.set_xlabel('Assembly position ({})'.format(lab), fontweight='bold')
+        ax.set_xlabel("{}:{}-{}\n".format(contig, minval, maxval), fontweight='bold')
 
     if args.name is not None:
         ax.set_ylabel('{} depth'.format(args.name), fontweight='bold')
